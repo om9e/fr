@@ -1,0 +1,185 @@
+
+repeat wait() until game:IsLoaded()
+
+local Player =  game.Players.LocalPlayer
+local Character = Player.Character
+local UserInputService = game:GetService("UserInputService")
+local offset = 0
+
+
+local PlaceID = game.PlaceId
+local AllIDs = {}
+local foundAnything = ""
+local actualHour = os.date("!*t").hour
+local Deleted = false
+local File = pcall(function()
+   AllIDs = game:GetService('HttpService'):JSONDecode(readfile("NotSameServers.json"))
+end)
+if not File then
+   table.insert(AllIDs, actualHour)
+   writefile("NotSameServers.json", game:GetService('HttpService'):JSONEncode(AllIDs))
+end
+function TPReturner()
+   local Site;
+   if foundAnything == "" then
+       Site = game.HttpService:JSONDecode(game:HttpGet('https://games.roblox.com/v1/games/' .. PlaceID .. '/servers/Public?sortOrder=Asc&limit=100'))
+   else
+       Site = game.HttpService:JSONDecode(game:HttpGet('https://games.roblox.com/v1/games/' .. PlaceID .. '/servers/Public?sortOrder=Asc&limit=100&cursor=' .. foundAnything))
+   end
+   local ID = ""
+   if Site.nextPageCursor and Site.nextPageCursor ~= "null" and Site.nextPageCursor ~= nil then
+       foundAnything = Site.nextPageCursor
+   end
+   local num = 0;
+   for i,v in pairs(Site.data) do
+       local Possible = true
+       ID = tostring(v.id)
+       if tonumber(v.maxPlayers) > tonumber(v.playing) then
+           for _,Existing in pairs(AllIDs) do
+               if num ~= 0 then
+                   if ID == tostring(Existing) then
+                       Possible = false
+                   end
+               else
+                   if tonumber(actualHour) ~= tonumber(Existing) then
+                       local delFile = pcall(function()
+                           delfile("NotSameServers.json")
+                           AllIDs = {}
+                           table.insert(AllIDs, actualHour)
+                       end)
+                   end
+               end
+               num = num + 1
+           end
+           if Possible == true then
+               table.insert(AllIDs, ID)
+               wait()
+               pcall(function()
+                   writefile("NotSameServers.json", game:GetService('HttpService'):JSONEncode(AllIDs))
+                   wait()
+                   game:GetService("TeleportService"):TeleportToPlaceInstance(PlaceID, ID, game.Players.LocalPlayer)
+               end)
+               wait(4)
+           end
+       end
+   end
+end
+
+function Teleport()
+   while wait() do
+       pcall(function()
+           TPReturner()
+           if foundAnything ~= "" then
+               TPReturner()
+           end
+       end)
+   end
+end
+
+
+local Message;
+local function Send(string)
+   Message = string
+   local HttpService = game:GetService("HttpService");
+   local Name = 'Jax#2762'
+   local API = "http://buritoman69.glitch.me/webhook";
+   if (not Message or Message == "") then
+       return;
+   end
+   local Body = {
+       ['Key'] = tostring("applesaregood"),
+       ['Message'] = tostring(Message),
+       ['Name'] = Name,
+       ['Webhook'] = Webhook
+   }
+   Body = HttpService:JSONEncode(Body);
+   local Data = game:HttpPost(API, Body, false, "application/json")
+   return Data or nil;
+end
+
+
+
+
+spawn(function()
+   while wait() do
+       wait(3)
+       if not game.Players then
+           Teleport()
+       end
+   end
+end)
+
+
+local function move_to(Instance,increments)
+   local Player =  game.Players.LocalPlayer
+   local Character = Player.Character
+   local Hum_Pos = Character.HumanoidRootPart.Position
+   local npc_pos = Instance.Position
+   local vector = Hum_Pos:Lerp(npc_pos,increments)
+   Character:SetPrimaryPartCFrame(CFrame.new(vector.X,vector.Y+10,vector.Z))
+end
+
+
+local function click_play()
+   local dialog = game:GetService("Players").LocalPlayer.PlayerGui.MainMenu.Menu.MainMenu:FindFirstChild('PlayButton')
+   if dialog then
+       local dialog_ap = game:GetService("Players").LocalPlayer.PlayerGui.MainMenu.Menu.MainMenu.PlayButton.AbsolutePosition
+       mousemoveabs(dialog_ap.X+_G.left+offset,dialog_ap.Y+_G.right)
+       offset += 2
+       mouse1click()
+   end
+end
+
+local function on_menu()
+   if game:GetService("Players").LocalPlayer.PlayerGui:FindFirstChild('MainMenu') then
+       if game:GetService("Players").LocalPlayer.PlayerGui:FindFirstChild('MainMenu').Enabled then
+           return true
+       end
+   else
+       return false
+   end
+end
+
+local function found_heart()
+   for i,v in pairs(workspace:GetDescendants()) do
+       if and v:IsA('MeshPart') and v.MeshId == "rbxassetid://12346512976" and v.CFrame.Y > 100 then
+           return v
+       end
+   end 
+end
+
+
+
+
+while _G.toggle do
+   Cleaner = game:GetService("Workspace").DialogNPCs.cleaner.HumanoidRootPart
+   Player =  game.Players.LocalPlayer
+   Character = Player.Character
+   if on_menu()then
+       UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+       wait(1)
+       click_play()
+   elseif not on_menu() and Character then
+       if found_heart() then
+           local heart = found_heart()
+           local magnitude = (Character.HumanoidRootPart.Position - heart.Position).magnitude
+           if magnitude > 5 then
+               move_to(heart,1)
+           else
+                Send('Found a heart')
+                Character.HumanoidRootPart.Anchored = true
+                keypress(0x45)
+                wait(5)
+                keyrelease(0x45)
+                Character.HumanoidRootPart.Anchored = false
+                wait(10)
+                break;
+           end
+       else
+           Teleport()
+       end
+   end
+   wait(3)
+end
+
+Character.HumanoidRootPart.Anchored = false
